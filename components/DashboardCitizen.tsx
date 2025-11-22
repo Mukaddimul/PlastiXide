@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { Card } from './ui/Card';
-import { ArrowUpRight, Leaf, Coins, MapPin, Bell, Calendar, Truck, Banknote, X, CalendarCheck, CheckCircle2, MessageSquare, Camera, History } from 'lucide-react';
+import { ArrowUpRight, Leaf, Coins, MapPin, Bell, Calendar, Truck, Banknote, X, CalendarCheck, CheckCircle2, MessageSquare, Camera, History, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { MapView } from './Map';
@@ -35,11 +36,26 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
   // New state for viewing complete history
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
+  // Photo Upload State
+  const [pickupImage, setPickupImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const isFisherman = user.role === UserRole.FISHERMAN;
 
   const calculateCash = () => {
     const w = parseFloat(estWeight);
     return isNaN(w) ? 0 : Math.floor(w * 25); // 25 BDT per kg for home pickup
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPickupImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handlePickupRequest = (e: React.FormEvent) => {
@@ -55,7 +71,8 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
       weight: estWeight,
       amount: cashAmount,
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-      location: 'Home Pickup Request'
+      location: 'Home Pickup Request',
+      proofImage: pickupImage
     };
 
     // Simulate API call
@@ -74,6 +91,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
     setShowPickupModal(false);
     setPickupSuccess(false);
     setEstWeight('');
+    setPickupImage(null);
   };
 
   return (
@@ -318,7 +336,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
       {/* Home Pickup Request Modal */}
       {showPickupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <Card className="w-full max-w-md relative overflow-hidden">
+          <Card className="w-full max-w-md relative overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar">
             {/* Close Button */}
             <button 
               onClick={closePickupModal}
@@ -359,6 +377,38 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">kg</span>
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">{t('photo')}</label>
+                  {!pickupImage ? (
+                     <button 
+                       type="button"
+                       onClick={() => fileInputRef.current?.click()}
+                       className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 flex items-center justify-center gap-2 hover:bg-gray-50 bg-white transition-colors"
+                     >
+                       <Camera size={20} />
+                       <span className="text-sm">Upload Photo of Waste</span>
+                     </button>
+                  ) : (
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-200 group">
+                       <img src={pickupImage} alt="Waste" className="w-full h-full object-cover" />
+                       <button 
+                         type="button" 
+                         onClick={() => setPickupImage(null)}
+                         className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                       >
+                         <Trash2 size={16} />
+                       </button>
+                    </div>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
                 </div>
 
                 <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex items-center gap-3">

@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UserRole } from '../types';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { Upload, User, Building, MapPin, Briefcase, FileText, Camera, ArrowRight, ArrowLeft, Languages } from 'lucide-react';
+import { Upload, User, Building, MapPin, Briefcase, FileText, Camera, ArrowRight, ArrowLeft, Languages, Image as ImageIcon, X, Map, Phone, Mail } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { MapView } from './Map';
 
 interface AuthProps {
   onLogin: (role: UserRole, name: string) => void;
@@ -18,6 +19,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, logoUrl }) => {
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [role, setRole] = useState<UserRole>(UserRole.CITIZEN);
   const [loading, setLoading] = useState(false);
+
+  // Public View States
+  const [showPublicMap, setShowPublicMap] = useState(false);
+  const [showContact, setShowContact] = useState(false);
 
   // Login State
   const [loginCreds, setLoginCreds] = useState({ identifier: '', password: '' });
@@ -37,6 +42,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, logoUrl }) => {
     fullName: '', centerName: '', location: '', phone: '', email: '',
     designation: 'Manager', workingHours: '', nid: ''
   });
+
+  // Photo Upload State
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,57 +71,89 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, logoUrl }) => {
     }, 1500);
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // --- Sub-components for Forms ---
 
   const renderLogin = () => (
-    <form onSubmit={handleLogin} className="space-y-5 animate-fade-in">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{t('role_select')}</label>
-        <select 
-          value={role} 
-          onChange={(e) => setRole(e.target.value as UserRole)}
-          className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none focus:border-brand-green"
-        >
-          <option value={UserRole.CITIZEN}>{t('role_citizen')}</option>
-          <option value={UserRole.FISHERMAN}>{t('role_fisherman')}</option>
-          <option value={UserRole.COLLECTION_CENTER}>{t('role_center')}</option>
-          <option value={UserRole.CORPORATE}>{t('role_corporate')}</option>
-          <option value={UserRole.ADMIN}>{t('role_admin')}</option>
-        </select>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <form onSubmit={handleLogin} className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('role_select')}</label>
+          <select 
+            value={role} 
+            onChange={(e) => setRole(e.target.value as UserRole)}
+            className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none focus:border-brand-green"
+          >
+            <option value={UserRole.CITIZEN}>{t('role_citizen')}</option>
+            <option value={UserRole.FISHERMAN}>{t('role_fisherman')}</option>
+            <option value={UserRole.COLLECTION_CENTER}>{t('role_center')}</option>
+            <option value={UserRole.CORPORATE}>{t('role_corporate')}</option>
+            <option value={UserRole.ADMIN}>{t('role_admin')}</option>
+          </select>
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{t('placeholder_creds')}</label>
-        <input 
-          type="text" 
-          required
-          value={loginCreds.identifier}
-          onChange={(e) => setLoginCreds({...loginCreds, identifier: e.target.value})}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-brand-green outline-none transition-all"
-          placeholder="Enter your credentials"
-        />
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('placeholder_creds')}</label>
+          <input 
+            type="text" 
+            required
+            value={loginCreds.identifier}
+            onChange={(e) => setLoginCreds({...loginCreds, identifier: e.target.value})}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-brand-green outline-none transition-all"
+            placeholder="Enter your credentials"
+          />
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{t('placeholder_pass')}</label>
-        <input 
-          type="password" 
-          required
-          value={loginCreds.password}
-          onChange={(e) => setLoginCreds({...loginCreds, password: e.target.value})}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-brand-green outline-none transition-all"
-          placeholder="••••••"
-        />
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('placeholder_pass')}</label>
+          <input 
+            type="password" 
+            required
+            value={loginCreds.password}
+            onChange={(e) => setLoginCreds({...loginCreds, password: e.target.value})}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-brand-green outline-none transition-all"
+            placeholder="••••••"
+          />
+        </div>
 
-      <Button type="submit" className="w-full py-4" isLoading={loading}>
-        {t('btn_login')}
-      </Button>
+        <Button type="submit" className="w-full py-4" isLoading={loading}>
+          {t('btn_login')}
+        </Button>
+        
+        <p className="text-center text-sm text-gray-500">
+          {t('dont_have_account')} <button type="button" onClick={() => setMode('REGISTER_ROLE_SELECT')} className="text-brand-green font-bold hover:underline">{t('btn_register_now')}</button>
+        </p>
+      </form>
       
-      <p className="text-center text-sm text-gray-500">
-        {t('dont_have_account')} <button type="button" onClick={() => setMode('REGISTER_ROLE_SELECT')} className="text-brand-green font-bold hover:underline">{t('btn_register_now')}</button>
-      </p>
-    </form>
+      {/* Public Finder & Contact Features */}
+      <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
+        <button 
+          onClick={() => setShowPublicMap(true)}
+          className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-blue-50 text-brand-blue hover:bg-blue-100 transition-colors border border-blue-100"
+        >
+          <Map size={24} />
+          <span className="text-xs font-bold">{t('find_locations')}</span>
+        </button>
+
+        <button 
+          onClick={() => setShowContact(true)}
+          className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-green-50 text-brand-green hover:bg-green-100 transition-colors border border-green-100"
+        >
+          <Phone size={24} />
+          <span className="text-xs font-bold">{t('contact_us')}</span>
+        </button>
+      </div>
+    </div>
   );
 
   const renderRoleSelect = () => (
@@ -201,9 +242,23 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, logoUrl }) => {
         </div>
         <div>
            <label className="text-xs font-bold text-gray-500 uppercase">Profile Photo</label>
-           <div className="w-full p-2.5 bg-white rounded-xl border border-gray-200 text-sm flex items-center justify-center text-gray-400 cursor-pointer">
-             <Camera size={16} />
+           <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full p-2.5 bg-white rounded-xl border border-gray-200 text-sm flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-50 overflow-hidden relative h-[46px]"
+           >
+             {profilePhoto ? (
+               <img src={profilePhoto} alt="Profile" className="absolute inset-0 w-full h-full object-cover rounded-xl" />
+             ) : (
+               <Camera size={16} />
+             )}
            </div>
+           <input 
+             type="file" 
+             ref={fileInputRef} 
+             className="hidden" 
+             accept="image/*"
+             onChange={handleFileChange}
+           />
         </div>
         <div className="col-span-2">
            <label className="text-xs font-bold text-gray-500 uppercase">Set Password</label>
@@ -349,6 +404,82 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, logoUrl }) => {
           &copy; 2024 PlastiXide Ecosystem. All rights reserved.
         </p>
       </div>
+
+      {/* Public Map Modal */}
+      {showPublicMap && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col relative overflow-hidden shadow-2xl">
+             <div className="absolute top-4 right-4 z-20">
+               <button onClick={() => setShowPublicMap(false)} className="bg-white rounded-full p-2 text-gray-600 shadow hover:text-red-500 transition-colors">
+                 <X size={24} />
+               </button>
+             </div>
+             <div className="p-4 border-b border-gray-200 flex items-center gap-3">
+                <div className="bg-blue-100 p-2 rounded-full text-brand-blue">
+                  <Map size={20} />
+                </div>
+                <h2 className="font-heading font-bold text-xl text-gray-800">{t('public_map_title')}</h2>
+             </div>
+             <div className="flex-1 relative bg-gray-100">
+               <MapView />
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Us Modal */}
+      {showContact && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <Card className="w-full max-w-md relative">
+             <button 
+               onClick={() => setShowContact(false)}
+               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+             >
+               <X size={20} />
+             </button>
+             
+             <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 text-brand-green rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Phone size={32} />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">{t('contact_support')}</h3>
+                <p className="text-gray-500 text-sm">We are here to help you 24/7</p>
+             </div>
+
+             <div className="space-y-4">
+                <a href="tel:+8801876343423" className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-brand-green hover:bg-green-50 transition-all group">
+                  <div className="bg-white p-3 rounded-full text-brand-green shadow-sm group-hover:scale-110 transition-transform">
+                    <Phone size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-brand-dark">{t('call_us')}</h4>
+                    <p className="text-sm text-gray-500">+880 1876-343423</p>
+                  </div>
+                </a>
+
+                <a href="mailto:plastixide.info@gmail.com" className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-brand-blue hover:bg-blue-50 transition-all group">
+                  <div className="bg-white p-3 rounded-full text-brand-blue shadow-sm group-hover:scale-110 transition-transform">
+                    <Mail size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-brand-dark">{t('email_us')}</h4>
+                    <p className="text-sm text-gray-500">plastixide.info@gmail.com</p>
+                  </div>
+                </a>
+
+                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="bg-white p-3 rounded-full text-orange-500 shadow-sm">
+                    <MapPin size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-brand-dark">{t('visit_office')}</h4>
+                    <p className="text-sm text-gray-500">Level 5, PlastiXide Tower, Gulshan 1, Dhaka</p>
+                  </div>
+                </div>
+             </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

@@ -41,6 +41,13 @@ export const translations = {
     back_login: "Back to Login",
     placeholder_creds: "Phone / Email / ID",
     placeholder_pass: "Password",
+    find_locations: "Find Locations",
+    contact_us: "Contact Us",
+    public_map_title: "PlastiXide Locations",
+    contact_support: "Support",
+    call_us: "Call Us",
+    email_us: "Email Us",
+    visit_office: "Visit Office",
     
     // Dashboard Citizen
     stat_recycled: "Total Recycled",
@@ -222,6 +229,13 @@ export const translations = {
     back_login: "লগ ইন এ ফিরে যান",
     placeholder_creds: "ফোন / ইমেল / আইডি",
     placeholder_pass: "পাসওয়ার্ড",
+    find_locations: "লোকেশন খুঁজুন",
+    contact_us: "যোগাযোগ করুন",
+    public_map_title: "প্লাস্টিক্সাইড লোকেশন",
+    contact_support: "সাপোর্ট",
+    call_us: "কল করুন",
+    email_us: "ইমেইল করুন",
+    visit_office: "অফিস ভিজিট করুন",
 
     // Dashboard Citizen
     stat_recycled: "মোট রিসাইকেল",

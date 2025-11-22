@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
-import { Camera, UserCheck, Send, Search, CheckCircle2, MessageSquare, Truck, BatteryFull, MapPin, AlertTriangle, UserPlus, X, CreditCard, FileText } from 'lucide-react';
+import { Camera, UserCheck, Send, Search, CheckCircle2, MessageSquare, Truck, BatteryFull, MapPin, AlertTriangle, UserPlus, X, CreditCard, FileText, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { MOCK_REGISTERED_FISHERMEN, MOCK_MAP_POINTS } from '../constants';
 import { MapPoint } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -22,6 +22,10 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastTx, setLastTx] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Photo Upload State
+  const [proofImage, setProofImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Registration Modal State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -50,6 +54,17 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
       setDispatchingId(null);
       alert("Collection Truck Dispatched! Machine status will be reset to 0% once collected.");
     }, 2000);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProofImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleRegisterUser = (e: React.FormEvent) => {
@@ -93,7 +108,8 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
       weight: weight,
       amount: totalAmount,
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-      location: 'Mirpur Hub (ID: C-102)'
+      location: 'Mirpur Hub (ID: C-102)',
+      proofImage: proofImage
     };
 
     // Simulate network delay and SMS sending time
@@ -110,6 +126,7 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
       // Reset Form
       setWeight('');
       setSelectedUser('');
+      setProofImage(null);
       
       // Auto hide success after 8 seconds to allow time to read the SMS
       setTimeout(() => setShowSuccess(false), 8000);
@@ -320,14 +337,48 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <button type="button" className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 flex items-center justify-center gap-2 hover:bg-gray-50 bg-white">
-                  <Camera size={20} />
-                  {t('photo')}
-                </button>
+              {/* Photo Upload for Proof */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">{t('photo')}</label>
+                <div className="flex gap-3">
+                  {!proofImage ? (
+                    <button 
+                      type="button" 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 flex items-center justify-center gap-2 hover:bg-gray-50 bg-white transition-colors"
+                    >
+                      <Camera size={20} />
+                      <span className="text-sm">Capture / Upload Proof</span>
+                    </button>
+                  ) : (
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-gray-200 group">
+                      <img src={proofImage} alt="Proof" className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => setProofImage(null)}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] p-1 text-center">
+                        Proof Attached
+                      </div>
+                    </div>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
                 <Button 
                   type="submit" 
-                  className="flex-[2]" 
+                  className="w-full" 
                   isLoading={loading}
                   disabled={!selectedUser || !weight}
                 >

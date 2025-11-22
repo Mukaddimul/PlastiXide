@@ -3,6 +3,7 @@ import { MOCK_VOUCHERS } from '../constants';
 import { Button } from './ui/Button';
 import { Clock, Tag } from 'lucide-react';
 import { User } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface MarketplaceProps {
   user: User;
@@ -10,11 +11,13 @@ interface MarketplaceProps {
 }
 
 export const Marketplace: React.FC<MarketplaceProps> = ({ user, onRedeem }) => {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-6 pb-20">
       <header>
-        <h2 className="text-2xl font-heading font-bold text-gray-800">Rewards Market</h2>
-        <p className="text-gray-500">Spend your {user.points} points</p>
+        <h2 className="text-2xl font-heading font-bold text-gray-800">{t('market_title')}</h2>
+        <p className="text-gray-500">{t('market_subtitle')} {user.points} {t('points')}</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -42,11 +45,11 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onRedeem }) => {
                <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
                  <div className="flex items-center gap-1 text-gray-400 text-xs">
                    <Clock size={14} />
-                   <span>Exp: {voucher.expiryDate}</span>
+                   <span>{t('market_exp')}: {voucher.expiryDate}</span>
                  </div>
                  
                  <div className="flex flex-col items-end gap-2 w-full mt-3">
-                    <span className="font-bold text-brand-green">{voucher.costPoints} pts</span>
+                    <span className="font-bold text-brand-green">{voucher.costPoints} {t('points')}</span>
                     <Button 
                       size="sm" 
                       className="w-full" 
@@ -54,7 +57,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ user, onRedeem }) => {
                       onClick={() => onRedeem(voucher.costPoints)}
                       variant={canAfford ? 'primary' : 'outline'}
                     >
-                      {canAfford ? 'Redeem' : 'Need more points'}
+                      {canAfford ? t('market_redeem') : t('market_need_points')}
                     </Button>
                  </div>
                </div>

@@ -1,8 +1,10 @@
+
 import React, { useState, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card } from './ui/Card';
 import { MOCK_CHART_DATA, MOCK_MAP_POINTS, MOCK_REGISTERED_FISHERMEN } from '../constants';
-import { Users, Truck, Archive, TrendingUp, Settings, Trash2, Power, Upload, Image as ImageIcon, AlertTriangle, Phone, UserCircle, Activity, DollarSign } from 'lucide-react';
+import { Users, Truck, Archive, TrendingUp, Settings, Trash2, Power, Upload, Image as ImageIcon, AlertTriangle, Phone, UserCircle, Activity } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const PIE_DATA = [
   { name: 'PET Bottles', value: 400 },
@@ -29,6 +31,7 @@ const MOCK_USERS_LIST = [
 ];
 
 export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onUpdateLogo, liveTransactions = [], readOnly = false }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'fishermen' | 'infra' | 'settings'>('overview');
   
   // Local state for management simulation
@@ -67,6 +70,12 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && onUpdateLogo) {
+      // Check file size (Limit to 1.5MB for localStorage safety)
+      if (file.size > 1.5 * 1024 * 1024) {
+        alert("File is too large! Please upload an image smaller than 1.5MB to ensure it saves permanently.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         onUpdateLogo(reader.result as string);
@@ -82,10 +91,10 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
        {/* KPI Cards */}
        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Users', val: '12.5k', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Machines', val: `${machines.length}`, icon: Archive, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Collection', val: '8.2t', icon: Truck, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Growth', val: '+14%', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: t('total_users'), val: '12.5k', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: t('machines'), val: `${machines.length}`, icon: Archive, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: t('collection'), val: '8.2t', icon: Truck, color: 'text-orange-600', bg: 'bg-orange-50' },
+          { label: t('growth'), val: '+14%', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
         ].map((stat, idx) => (
           <Card key={idx} className="flex flex-col items-center justify-center text-center py-6">
             <div className={`${stat.bg} p-3 rounded-full mb-2`}>
@@ -103,16 +112,16 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-heading font-bold text-gray-800 flex items-center gap-2">
               <Activity size={18} className="text-red-500 animate-pulse" />
-              Live Disbursements
+              {t('live_disbursements')}
             </h3>
-            <span className="text-xs text-gray-500">{liveTransactions.length} today</span>
+            <span className="text-xs text-gray-500">{liveTransactions.length} {t('today')}</span>
           </div>
           
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm h-[350px] overflow-y-auto p-4 space-y-3 custom-scrollbar">
              {liveTransactions.length === 0 ? (
                <div className="flex flex-col items-center justify-center h-full text-gray-400 text-center p-4">
                  <Truck size={32} className="mb-2 opacity-20" />
-                 <p className="text-xs">Waiting for live transactions from collection centers...</p>
+                 <p className="text-xs">{t('waiting_tx')}</p>
                </div>
              ) : (
                liveTransactions.map((tx, idx) => (
@@ -139,7 +148,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
 
         {/* Charts - Takes up 2/3 on large screens */}
         <div className="lg:col-span-2 space-y-6">
-           <Card title="Collection Trends (kg)">
+           <Card title={t('collection_trends')}>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={MOCK_CHART_DATA}>
@@ -152,6 +161,30 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
               </ResponsiveContainer>
             </div>
           </Card>
+
+          <Card title={t('plastic_dist')}>
+             <div className="h-48 flex items-center justify-center">
+               <ResponsiveContainer width="100%" height="100%">
+                 <PieChart>
+                   <Pie
+                     data={PIE_DATA}
+                     cx="50%"
+                     cy="50%"
+                     innerRadius={60}
+                     outerRadius={80}
+                     paddingAngle={5}
+                     dataKey="value"
+                   >
+                     {PIE_DATA.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                     ))}
+                   </Pie>
+                   <Tooltip contentStyle={{borderRadius: '8px', border: 'none'}} />
+                   <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" />
+                 </PieChart>
+               </ResponsiveContainer>
+             </div>
+          </Card>
         </div>
       </div>
     </div>
@@ -159,15 +192,15 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
 
   const renderFishermen = () => (
     <div className="space-y-6 animate-fade-in">
-      <Card title="Registered Fishermen & Hawkers">
+      <Card title={t('reg_fishermen')}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-400">
               <tr>
                 <th className="p-3">ID</th>
-                <th className="p-3">Name</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Phone Number</th>
+                <th className="p-3">{t('personal_info')}</th>
+                <th className="p-3">{t('scan_type')}</th>
+                <th className="p-3">{t('placeholder_creds').split('/')[0].trim()}</th>
                 <th className="p-3 text-right">Status</th>
               </tr>
             </thead>
@@ -193,7 +226,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
                     {f.phone}
                   </td>
                   <td className="p-3 text-right">
-                     <span className="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-full">Verified</span>
+                     <span className="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-full">{t('verified')}</span>
                   </td>
                 </tr>
               ))}
@@ -202,7 +235,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
         </div>
       </Card>
 
-      <Card title="Recent Payout Logs (Admin Record)">
+      <Card title={t('recent_payouts')}>
          <div className="overflow-x-auto">
             {liveTransactions.length === 0 ? (
                <div className="p-6 text-center text-gray-400 text-sm">No recent payment transactions recorded today.</div>
@@ -236,7 +269,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
   );
 
   const renderUsers = () => (
-    <Card title="User Management (App Users)" className="animate-fade-in">
+    <Card title={t('user_mgmt')} className="animate-fade-in">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-gray-600">
           <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-400">
@@ -264,7 +297,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
                 <td className="p-3 font-mono">{u.points}</td>
                 <td className="p-3">
                    <span className={`font-bold text-xs ${u.status === 'Active' ? 'text-green-500' : 'text-red-500'}`}>
-                     {u.status}
+                     {u.status === 'Active' ? t('active') : t('banned')}
                    </span>
                 </td>
                 <td className="p-3 text-right">
@@ -273,7 +306,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
                       onClick={() => toggleUserStatus(u.id)}
                       className={`text-xs font-semibold underline ${u.status === 'Active' ? 'text-red-500' : 'text-green-500'}`}
                      >
-                       {u.status === 'Active' ? 'Ban User' : 'Activate'}
+                       {u.status === 'Active' ? t('ban_user') : t('activate')}
                      </button>
                    )}
                 </td>
@@ -287,7 +320,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
 
   const renderInfra = () => (
     <div className="space-y-6 animate-fade-in">
-      <Card title="Vending Machines Control" className="overflow-hidden">
+      <Card title={t('infra_control')} className="overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {machines.map(m => (
             <div key={m.id} className="border border-gray-200 rounded-xl p-4 flex flex-col justify-between bg-white hover:shadow-md transition-shadow">
@@ -302,7 +335,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
                   'bg-red-100 text-red-700'
                 }`}>
                   {m.status === 'MAINTENANCE' && <AlertTriangle size={10} />}
-                  {m.status}
+                  {m.status === 'ONLINE' ? t('status_online') : m.status === 'MAINTENANCE' ? t('status_maintenance') : t('status_full')}
                 </div>
               </div>
               
@@ -313,7 +346,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
                   className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Power size={14} />
-                  {m.status === 'ONLINE' ? 'Set Maint.' : 'Set Online'}
+                  {m.status === 'ONLINE' ? t('set_maint') : t('set_online')}
                 </button>
                 <button 
                   onClick={() => deleteMachine(m.id)}
@@ -332,7 +365,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
 
   const renderSettings = () => (
     <div className="space-y-6 animate-fade-in">
-      <Card title="App Branding & Appearance">
+      <Card title={t('branding')}>
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
           {/* Logo Preview */}
           <div className="flex flex-col items-center gap-3">
@@ -349,7 +382,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
           {/* Upload Controls */}
           <div className="flex-1 space-y-4 w-full">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Application Logo</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">{t('upload_logo')}</label>
               <div className="flex gap-3 items-center">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
@@ -357,7 +390,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
                   className="bg-brand-blue text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Upload size={16} />
-                  Upload New Logo
+                  {t('upload_logo')}
                 </button>
                 <input 
                   type="file" 
@@ -372,7 +405,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
                    disabled={readOnly}
                    className="px-4 py-2 border border-red-200 text-red-500 rounded-xl font-semibold text-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                  >
-                   Reset to Default
+                   {t('reset_default')}
                  </button>
                 )}
               </div>
@@ -384,7 +417,7 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
             <hr className="border-gray-100" />
 
             <div>
-               <label className="block text-sm font-bold text-gray-700 mb-2">System Maintenance Mode</label>
+               <label className="block text-sm font-bold text-gray-700 mb-2">{t('maint_mode')}</label>
                <div className="flex items-center gap-3">
                  <div className="w-12 h-6 bg-gray-200 rounded-full p-1 cursor-pointer transition-colors hover:bg-gray-300">
                    <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
@@ -404,8 +437,8 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
     <div className="space-y-6 pb-20 animate-fade-in">
       <header className="mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-heading font-bold text-gray-800">{readOnly ? 'Center Analytics' : 'Admin Console'}</h2>
-          <p className="text-gray-500">{readOnly ? 'View only mode' : 'Master Control Panel'}</p>
+          <h2 className="text-2xl font-heading font-bold text-gray-800">{readOnly ? t('center_analytics') : t('admin_console')}</h2>
+          <p className="text-gray-500">{readOnly ? t('view_only') : t('master_control')}</p>
         </div>
         
         {/* Admin Nav Tabs */}

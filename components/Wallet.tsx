@@ -4,6 +4,7 @@ import { MOCK_TRANSACTIONS } from '../constants';
 import { ArrowDownLeft, ArrowUpRight, History, Building, CreditCard, Plus, Download, Upload } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface WalletProps {
   user: User;
@@ -17,6 +18,7 @@ interface BankAccount {
 }
 
 const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
+  const { t } = useLanguage();
   const [balance, setBalance] = useState(user.walletBalance);
   const [showAddBank, setShowAddBank] = useState(false);
   const [transferMode, setTransferMode] = useState<'DEPOSIT' | 'WITHDRAW' | null>(null);
@@ -63,13 +65,15 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
     }, 1500);
   };
 
+  const walletTitle = user.role === UserRole.ADMIN ? t('admin_finance_title') : t('corp_wallet_title');
+
   return (
     <div className="space-y-6 pb-20 animate-fade-in">
        <header>
         <h2 className="text-2xl font-heading font-bold text-gray-800">
-          {user.role === UserRole.ADMIN ? 'Platform Finance' : 'Corporate Wallet'}
+          {walletTitle}
         </h2>
-        <p className="text-gray-500">Manage funds, bank accounts & transfers</p>
+        <p className="text-gray-500">{t('wallet_subtitle_biz')}</p>
       </header>
 
       {/* Business Balance Card */}
@@ -77,9 +81,9 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
         <div className="absolute right-0 top-0 w-48 h-48 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
         
         <div className="relative z-10">
-          <p className="text-gray-400 text-sm mb-2 uppercase tracking-wider">Available Funds</p>
+          <p className="text-gray-400 text-sm mb-2 uppercase tracking-wider">{t('avail_funds')}</p>
           <h3 className="text-5xl font-bold font-heading mb-6 flex items-baseline gap-2">
-            <span className="text-2xl text-gray-400">৳</span>
+            <span className="text-2xl text-gray-400">{t('currency')}</span>
             {balance.toLocaleString()}
           </h3>
           
@@ -89,14 +93,14 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
               className="bg-brand-green hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20"
             >
               <Download size={18} />
-              Load Funds
+              {t('load_funds')}
             </button>
             <button 
               onClick={() => setTransferMode('WITHDRAW')}
               className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors backdrop-blur-sm"
             >
               <Upload size={18} />
-              Withdraw
+              {t('withdraw')}
             </button>
           </div>
         </div>
@@ -107,7 +111,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
            <Card className="w-full max-w-md animate-fade-in">
              <h3 className="font-bold text-xl mb-1">
-               {transferMode === 'DEPOSIT' ? 'Load Funds from Bank' : 'Withdraw to Bank'}
+               {transferMode === 'DEPOSIT' ? t('load_funds') : t('withdraw')}
              </h3>
              <p className="text-sm text-gray-500 mb-4">
                {transferMode === 'DEPOSIT' 
@@ -123,14 +127,14 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
                    required
                    value={amount}
                    onChange={(e) => setAmount(e.target.value)}
-                   className="w-full p-3 text-2xl font-bold border-b-2 border-brand-blue outline-none focus:border-brand-green bg-transparent"
+                   className="w-full p-3 text-2xl font-bold border-b-2 border-brand-blue outline-none focus:border-brand-green bg-white"
                    placeholder="0.00"
                  />
                </div>
 
                <div>
                  <label className="text-xs font-bold text-gray-500 uppercase block mb-2">Select Bank</label>
-                 <select className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none">
+                 <select className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none">
                    {linkedBanks.map(b => (
                      <option key={b.id} value={b.id}>{b.bankName} ({b.accountNo})</option>
                    ))}
@@ -152,7 +156,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Linked Accounts */}
-        <Card title="Linked Accounts">
+        <Card title={t('linked_acc')}>
           <div className="space-y-3">
              {linkedBanks.map(bank => (
                <div key={bank.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50">
@@ -175,7 +179,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
                   className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 hover:border-brand-blue hover:text-brand-blue transition-all"
                 >
                   <Plus size={18} />
-                  Link New Bank Account
+                  {t('link_new')}
                 </button>
              ) : (
                 <form onSubmit={handleAddBank} className="p-4 bg-gray-50 rounded-xl border border-gray-200 animate-fade-in space-y-3">
@@ -185,7 +189,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
                      required
                      value={newBank.name}
                      onChange={e => setNewBank({...newBank, name: e.target.value})}
-                     className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                     className="w-full p-2 rounded-lg border border-gray-200 text-sm bg-white"
                    />
                    <input 
                      type="text" 
@@ -193,7 +197,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
                      required
                      value={newBank.account}
                      onChange={e => setNewBank({...newBank, account: e.target.value})}
-                     className="w-full p-2 rounded-lg border border-gray-200 text-sm"
+                     className="w-full p-2 rounded-lg border border-gray-200 text-sm bg-white"
                    />
                    <div className="flex gap-2">
                      <Button type="submit" size="sm" className="flex-1" isLoading={isLoading}>Link Account</Button>
@@ -205,7 +209,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
         </Card>
 
         {/* Recent Transfers */}
-        <Card title="Recent Transfers">
+        <Card title={t('recent_trans')}>
           <div className="space-y-4">
              {[
                { id: 1, type: 'DEPOSIT', amount: 50000, date: 'Today, 10:00 AM', status: 'COMPLETED' },
@@ -218,7 +222,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
                      {tx.type === 'DEPOSIT' ? <Download size={16} /> : <CreditCard size={16} />}
                    </div>
                    <div>
-                     <p className="text-sm font-bold text-brand-dark">{tx.type === 'DEPOSIT' ? 'Funds Loaded' : 'Withdrawal'}</p>
+                     <p className="text-sm font-bold text-brand-dark">{tx.type === 'DEPOSIT' ? t('funds_loaded') : t('withdrawal')}</p>
                      <p className="text-xs text-gray-400">{tx.date}</p>
                    </div>
                  </div>
@@ -240,6 +244,7 @@ const BusinessWallet: React.FC<{ user: User }> = ({ user }) => {
 };
 
 export const Wallet: React.FC<WalletProps> = ({ user }) => {
+  const { t } = useLanguage();
   const isBusiness = user.role === UserRole.CORPORATE || user.role === UserRole.ADMIN;
 
   if (isBusiness) {
@@ -250,16 +255,16 @@ export const Wallet: React.FC<WalletProps> = ({ user }) => {
   return (
     <div className="space-y-6 pb-20">
       <header>
-        <h2 className="text-2xl font-heading font-bold text-gray-800">My Wallet</h2>
-        <p className="text-gray-500">Track your earnings and impact</p>
+        <h2 className="text-2xl font-heading font-bold text-gray-800">{t('wallet_title')}</h2>
+        <p className="text-gray-500">{t('wallet_subtitle')}</p>
       </header>
 
       {/* Balance Card */}
       <div className="bg-gradient-to-r from-brand-dark to-gray-800 rounded-2xl p-6 text-white shadow-xl">
         <div className="flex justify-between items-start mb-8">
           <div>
-            <p className="text-gray-400 text-sm mb-1">Current Balance</p>
-            <h3 className="text-4xl font-bold font-heading">{user.points.toLocaleString()} <span className="text-lg font-normal text-brand-green">pts</span></h3>
+            <p className="text-gray-400 text-sm mb-1">{t('current_balance')}</p>
+            <h3 className="text-4xl font-bold font-heading">{user.points.toLocaleString()} <span className="text-lg font-normal text-brand-green">{t('points')}</span></h3>
           </div>
           <div className="bg-white/10 p-2 rounded-lg">
             <div className="w-8 h-5 rounded border-2 border-white/30 flex items-center justify-center text-[8px] tracking-widest">
@@ -271,14 +276,14 @@ export const Wallet: React.FC<WalletProps> = ({ user }) => {
           <div className="flex-1 bg-white/5 rounded-xl p-3 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-emerald-400 mb-1">
               <ArrowDownLeft size={16} />
-              <span className="text-xs font-bold">EARNED</span>
+              <span className="text-xs font-bold">{t('earned')}</span>
             </div>
             <p className="font-semibold">2,450</p>
           </div>
           <div className="flex-1 bg-white/5 rounded-xl p-3 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-red-400 mb-1">
               <ArrowUpRight size={16} />
-              <span className="text-xs font-bold">SPENT</span>
+              <span className="text-xs font-bold">{t('spent')}</span>
             </div>
             <p className="font-semibold">1,200</p>
           </div>
@@ -289,7 +294,7 @@ export const Wallet: React.FC<WalletProps> = ({ user }) => {
       <div>
         <div className="flex items-center gap-2 mb-4">
           <History className="text-gray-400" size={20} />
-          <h3 className="font-heading font-semibold text-gray-700">History</h3>
+          <h3 className="font-heading font-semibold text-gray-700">{t('history')}</h3>
         </div>
 
         <div className="space-y-3">
@@ -307,7 +312,7 @@ export const Wallet: React.FC<WalletProps> = ({ user }) => {
                 </div>
               </div>
               <div className={`text-right ${tx.type === 'DEPOSIT' ? 'text-green-600' : 'text-brand-dark'}`}>
-                <p className="font-bold">{tx.type === 'DEPOSIT' ? '+' : ''}{tx.pointsEarned} pts</p>
+                <p className="font-bold">{tx.type === 'DEPOSIT' ? '+' : ''}{tx.pointsEarned} {t('points')}</p>
                 {tx.amountKg && <p className="text-xs text-gray-400">{tx.amountKg} kg</p>}
               </div>
             </div>

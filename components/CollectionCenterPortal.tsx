@@ -1,14 +1,20 @@
+
 import React, { useState } from 'react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
-import { Camera, UserCheck, Send, Search, CheckCircle2, MessageSquare } from 'lucide-react';
-import { MOCK_REGISTERED_FISHERMEN } from '../constants';
+import { Camera, UserCheck, Send, Search, CheckCircle2, MessageSquare, Truck, BatteryFull, MapPin, AlertTriangle, UserPlus, X, CreditCard, FileText } from 'lucide-react';
+import { MOCK_REGISTERED_FISHERMEN, MOCK_MAP_POINTS } from '../constants';
+import { MapPoint } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CollectionCenterPortalProps {
   onNewTransaction?: (data: any) => void;
 }
 
 export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ onNewTransaction }) => {
+  const { t } = useLanguage();
+  // Initialize user list with mock data, but allow additions
+  const [registeredUsers, setRegisteredUsers] = useState(MOCK_REGISTERED_FISHERMEN);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [weight, setWeight] = useState('');
   const [pricePerKg, setPricePerKg] = useState(35); // BDT
@@ -16,11 +22,56 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastTx, setLastTx] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Registration Modal State
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [newCollector, setNewCollector] = useState({ 
+    name: '', phone: '', type: 'Fisherman', zone: '', nid: '', 
+    emergencyContact: '', bkash: '', bankAccount: '' 
+  });
+
+  // Local state for machine alerts (Initialize with machines > 80% capacity)
+  const [machineAlerts, setMachineAlerts] = useState<MapPoint[]>(
+    MOCK_MAP_POINTS.filter(p => p.type === 'MACHINE' && (p.capacity || 0) >= 80)
+  );
+  const [dispatchingId, setDispatchingId] = useState<string | null>(null);
 
   const handleCalculate = () => {
     const w = parseFloat(weight);
     if (isNaN(w)) return 0;
     return Math.floor(w * pricePerKg);
+  };
+
+  const handleDispatchTruck = (machineId: string) => {
+    setDispatchingId(machineId);
+    setTimeout(() => {
+      // Remove the machine from alerts after "emptying" it
+      setMachineAlerts(prev => prev.filter(m => m.id !== machineId));
+      setDispatchingId(null);
+      alert("Collection Truck Dispatched! Machine status will be reset to 0% once collected.");
+    }, 2000);
+  };
+
+  const handleRegisterUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCollector.name || !newCollector.phone) return;
+
+    const newId = `${newCollector.type === 'Fisherman' ? 'F' : 'H'}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newUserEntry = {
+      id: newId,
+      name: newCollector.name,
+      phone: newCollector.phone,
+      type: newCollector.type
+    };
+
+    setRegisteredUsers([newUserEntry, ...registeredUsers]);
+    setSelectedUser(newId); // Auto select the new user
+    setShowRegisterModal(false);
+    // Reset form
+    setNewCollector({ 
+      name: '', phone: '', type: 'Fisherman', zone: '', nid: '', 
+      emergencyContact: '', bkash: '', bankAccount: '' 
+    }); 
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -32,7 +83,7 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
 
     setLoading(true);
     
-    const userDetails = MOCK_REGISTERED_FISHERMEN.find(u => u.id === selectedUser);
+    const userDetails = registeredUsers.find(u => u.id === selectedUser);
     const totalAmount = handleCalculate();
     const txData = {
       id: Date.now().toString(),
@@ -65,9 +116,9 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
     }, 2000);
   };
 
-  const currentUserDetails = MOCK_REGISTERED_FISHERMEN.find(u => u.id === selectedUser);
+  const currentUserDetails = registeredUsers.find(u => u.id === selectedUser);
 
-  const filteredFishermen = MOCK_REGISTERED_FISHERMEN.filter(f => 
+  const filteredFishermen = registeredUsers.filter(f => 
     f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     f.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     f.phone.includes(searchTerm)
@@ -76,21 +127,66 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
   return (
     <div className="space-y-6 pb-20">
       <header>
-        <h2 className="text-2xl font-heading font-bold text-gray-800">Collection Center</h2>
+        <h2 className="text-2xl font-heading font-bold text-gray-800">{t('cc_portal')}</h2>
         <p className="text-gray-500">Mirpur Hub (ID: C-102)</p>
       </header>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-4">
         <Card className="bg-brand-dark text-white">
-          <p className="text-gray-400 text-xs uppercase">Today's Collection</p>
+          <p className="text-gray-400 text-xs uppercase">{t('todays_coll')}</p>
           <h3 className="text-2xl font-bold">458.5 kg</h3>
         </Card>
         <Card className="bg-brand-blue text-white">
-          <p className="text-blue-100 text-xs uppercase">Cash Paid Out</p>
+          <p className="text-blue-100 text-xs uppercase">{t('cash_paid')}</p>
           <h3 className="text-2xl font-bold">৳ 12,500</h3>
         </Card>
       </div>
+
+      {/* Machine Alerts Section - New Feature */}
+      {machineAlerts.length > 0 && (
+        <div className="animate-fade-in">
+          <h3 className="font-heading font-bold text-lg text-red-600 mb-3 flex items-center gap-2">
+            <AlertTriangle className="animate-pulse" />
+            {t('urgent_alerts')}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {machineAlerts.map(machine => (
+              <div key={machine.id} className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-red-500 shadow-sm relative">
+                     <BatteryFull size={24} />
+                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-[10px] flex items-center justify-center rounded-full font-bold">!</span>
+                   </div>
+                   <div>
+                     <h4 className="font-bold text-gray-800">{machine.name}</h4>
+                     <div className="flex items-center gap-1 text-xs text-gray-500">
+                       <MapPin size={12} />
+                       {machine.address}
+                     </div>
+                     <div className="mt-1 flex items-center gap-2">
+                       <span className="text-xs font-bold text-red-600">Capacity: {machine.capacity}%</span>
+                       <div className="w-24 h-1.5 bg-red-200 rounded-full overflow-hidden">
+                         <div className="h-full bg-red-600" style={{width: `${machine.capacity}%`}}></div>
+                       </div>
+                     </div>
+                   </div>
+                </div>
+                
+                <Button 
+                  onClick={() => handleDispatchTruck(machine.id)}
+                  isLoading={dispatchingId === machine.id}
+                  className="w-full md:w-auto bg-red-600 hover:bg-red-700 shadow-red-200"
+                  size="sm"
+                >
+                  <Truck size={16} className="mr-2" />
+                  {t('dispatch_truck')}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Entry Form */}
@@ -100,7 +196,7 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
               
               <div className="flex items-center gap-2 text-green-600 mb-6">
                 <CheckCircle2 size={32} />
-                <h3 className="text-2xl font-bold font-heading">Transaction Successful</h3>
+                <h3 className="text-2xl font-bold font-heading">{t('tx_success')}</h3>
               </div>
 
               {/* Realistic Mobile SMS Simulation */}
@@ -129,7 +225,7 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
                        </div>
                        
                        <div>
-                         <p className="text-xs font-bold mb-1">Payment Received</p>
+                         <p className="text-xs font-bold mb-1">{t('pay_received')}</p>
                          <p className="text-xs text-gray-700 leading-relaxed">
                            Dear {lastTx.userName}, you received <span className="font-bold">৳{lastTx.amount}</span> for <span className="font-bold">{lastTx.weight}kg</span> plastic at {lastTx.location}.
                            <br/><br/>
@@ -150,28 +246,39 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
               </div>
 
               <div className="mt-8 flex flex-col items-center gap-2">
-                <p className="text-sm text-gray-500">SMS has been sent automatically.</p>
+                <p className="text-sm text-gray-500">{t('sms_sent_auto')}</p>
                 <Button onClick={() => setShowSuccess(false)} size="sm" variant="outline">
-                   Start New Entry
+                   {t('start_new')}
                 </Button>
               </div>
             </div>
           )}
 
-          <Card title="New Plastic Entry">
+          <Card title={t('new_entry')}>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex justify-between items-end mb-1">
+                <label className="text-xs font-bold text-gray-500 uppercase">{t('select_collector')}</label>
+                <button 
+                  type="button" 
+                  onClick={() => setShowRegisterModal(true)}
+                  className="text-[10px] font-bold text-brand-blue bg-blue-50 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-100 transition-colors"
+                >
+                  <UserPlus size={12} />
+                  {t('register_new')}
+                </button>
+              </div>
+              
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Select Registered Collector</label>
                 <select 
                   value={selectedUser}
                   onChange={(e) => setSelectedUser(e.target.value)}
-                  className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-brand-blue transition-colors appearance-none cursor-pointer"
+                  className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none focus:border-brand-blue transition-colors appearance-none cursor-pointer"
                   required
                 >
-                  <option value="">-- Select Fisherman / Hawker --</option>
-                  {MOCK_REGISTERED_FISHERMEN.map(user => (
+                  <option value="">-- {t('select_collector')} --</option>
+                  {registeredUsers.map(user => (
                     <option key={user.id} value={user.id}>
-                      {user.name} (ID: {user.id})
+                      {user.name} (ID: {user.id}) - {user.phone}
                     </option>
                   ))}
                 </select>
@@ -190,13 +297,13 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
               )}
 
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Weight (kg)</label>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">{t('weight_kg')}</label>
                 <input 
                   type="number"
                   step="0.1"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
-                  className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-brand-blue transition-colors text-2xl font-mono"
+                  className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none focus:border-brand-blue transition-colors text-2xl font-mono"
                   placeholder="0.0"
                   required
                 />
@@ -204,19 +311,19 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
 
               <div className="flex justify-between items-center bg-green-50 p-4 rounded-xl border border-green-100">
                 <div>
-                  <p className="text-xs text-green-700">Calculated Payment</p>
+                  <p className="text-xs text-green-700">{t('calc_payment')}</p>
                   <p className="font-bold text-brand-green text-xl">৳ {handleCalculate()}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-gray-500">Rate: ৳{pricePerKg}/kg</p>
-                  <button type="button" onClick={() => setPricePerKg(pricePerKg + 1)} className="text-xs text-blue-500 underline">Edit Rate</button>
+                  <button type="button" onClick={() => setPricePerKg(pricePerKg + 1)} className="text-xs text-blue-500 underline">{t('edit_rate')}</button>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <button type="button" className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 flex items-center justify-center gap-2 hover:bg-gray-50">
+                <button type="button" className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 flex items-center justify-center gap-2 hover:bg-gray-50 bg-white">
                   <Camera size={20} />
-                  Photo
+                  {t('photo')}
                 </button>
                 <Button 
                   type="submit" 
@@ -226,12 +333,12 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
                 >
                   {loading ? (
                     <span className="text-xs">
-                      Sending SMS to {currentUserDetails?.phone?.split('-')[0]}...
+                      {t('sending_sms')}
                     </span>
                   ) : (
                     <>
                       <Send size={18} className="mr-2" />
-                      Confirm Payment & Send SMS
+                      {t('confirm_pay_sms')}
                     </>
                   )}
                 </Button>
@@ -242,15 +349,15 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
 
         {/* Right Column: Directory */}
         <div className="lg:col-span-1">
-           <Card title="Collector Directory" className="h-full max-h-[600px] flex flex-col">
+           <Card title={t('directory')} className="h-full max-h-[600px] flex flex-col">
              <div className="mb-3 relative">
                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                <input 
                  type="text" 
-                 placeholder="Search name or ID..." 
+                 placeholder={t('search_placeholder')} 
                  value={searchTerm}
                  onChange={(e) => setSearchTerm(e.target.value)}
-                 className="w-full pl-9 pr-3 py-2 bg-gray-50 rounded-lg text-sm border border-gray-100 focus:border-brand-blue outline-none"
+                 className="w-full pl-9 pr-3 py-2 bg-white rounded-lg text-sm border border-gray-100 focus:border-brand-blue outline-none"
                />
              </div>
              <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
@@ -288,6 +395,97 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
            </Card>
         </div>
       </div>
+
+      {/* Register New User Modal */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <Card className="w-full max-w-lg relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button 
+              onClick={() => setShowRegisterModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <h3 className="text-xl font-bold text-brand-dark mb-4 flex items-center gap-2 sticky top-0 bg-white z-10 pb-2">
+              <UserPlus className="text-brand-blue" size={24} />
+              {t('new_coll_reg')}
+            </h3>
+
+            <form onSubmit={handleRegisterUser} className="space-y-4">
+              {/* Section 1: Basic Info */}
+              <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2"><UserCheck size={16} /> {t('personal_info')}</h4>
+                <div className="grid grid-cols-2 gap-3">
+                   <div className="col-span-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Full Name</label>
+                    <input type="text" required value={newCollector.name} onChange={(e) => setNewCollector({...newCollector, name: e.target.value})}
+                      className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none text-sm" placeholder="e.g. Abdul Karim" />
+                   </div>
+                   <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Phone Number</label>
+                    <input type="tel" required value={newCollector.phone} onChange={(e) => setNewCollector({...newCollector, phone: e.target.value})}
+                      className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none text-sm" placeholder="017..." />
+                   </div>
+                   <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Emergency Contact</label>
+                    <input type="tel" value={newCollector.emergencyContact} onChange={(e) => setNewCollector({...newCollector, emergencyContact: e.target.value})}
+                      className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none text-sm" />
+                   </div>
+                </div>
+              </div>
+
+              {/* Section 2: Work Details */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Role & Zone</label>
+                <div className="flex gap-3 mb-3">
+                  <button type="button" onClick={() => setNewCollector({...newCollector, type: 'Fisherman'})}
+                    className={`flex-1 p-3 rounded-xl border text-sm font-semibold transition-all ${newCollector.type === 'Fisherman' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-500'}`}>Fisherman</button>
+                  <button type="button" onClick={() => setNewCollector({...newCollector, type: 'Hawker'})}
+                    className={`flex-1 p-3 rounded-xl border text-sm font-semibold transition-all ${newCollector.type === 'Hawker' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-gray-200 text-gray-500'}`}>Hawker</button>
+                </div>
+                <input type="text" placeholder="Fishing Area / Working Zone" className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none text-sm"
+                  value={newCollector.zone} onChange={e => setNewCollector({...newCollector, zone: e.target.value})} />
+              </div>
+
+              {/* Section 3: Identity & Banking */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                   <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">NID Number</label>
+                   <input type="text" required value={newCollector.nid} onChange={(e) => setNewCollector({...newCollector, nid: e.target.value})}
+                     className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none text-sm" />
+                </div>
+                <div>
+                   <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">bKash / Nagad</label>
+                   <input type="text" value={newCollector.bkash} onChange={(e) => setNewCollector({...newCollector, bkash: e.target.value})}
+                     className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none text-sm" placeholder="Wallet No." />
+                </div>
+                <div>
+                   <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Bank Account (Opt)</label>
+                   <input type="text" value={newCollector.bankAccount} onChange={(e) => setNewCollector({...newCollector, bankAccount: e.target.value})}
+                     className="w-full p-3 bg-white rounded-xl border border-gray-200 outline-none text-sm" placeholder="Acct No." />
+                </div>
+              </div>
+
+              {/* Section 4: Documents */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-50">
+                    <CreditCard size={20} />
+                    <span className="text-[10px] mt-1">{t('upload_nid')}</span>
+                 </div>
+                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-50">
+                    <Camera size={20} />
+                    <span className="text-[10px] mt-1">{t('live_photo')}</span>
+                 </div>
+              </div>
+
+              <Button type="submit" className="w-full mt-2 py-3 shadow-lg shadow-blue-200">
+                {t('reg_select')}
+              </Button>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

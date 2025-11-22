@@ -9,7 +9,9 @@ import { CorporatePortal } from './components/CorporatePortal';
 import { Wallet } from './components/Wallet';
 import { Auth } from './components/Auth';
 import { UserRole, User, Transaction } from './types';
-import { LogOut } from 'lucide-react';
+import { LogOut, Languages } from 'lucide-react';
+import { useLanguage } from './contexts/LanguageContext';
+import { DEFAULT_LOGO_URL } from './constants';
 
 const App: React.FC = () => {
   // State
@@ -17,6 +19,9 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
+  // Language Hook
+  const { language, setLanguage } = useLanguage();
+
   // Shared State for Admin Monitoring
   // In a real app, this would come from a websocket or backend polling
   const [liveTransactions, setLiveTransactions] = useState<any[]>([]);
@@ -24,18 +29,33 @@ const App: React.FC = () => {
   // Global App Settings State with Persistence
   const [appLogo, setAppLogo] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('plastixide_app_logo');
+      try {
+        const saved = localStorage.getItem('plastixide_app_logo');
+        return saved || DEFAULT_LOGO_URL;
+      } catch (e) {
+        console.error("Failed to access local storage", e);
+        return DEFAULT_LOGO_URL;
+      }
     }
-    return null;
+    return DEFAULT_LOGO_URL;
   });
 
   // Update Logo Handler with Persistence
   const handleUpdateLogo = (newLogo: string | null) => {
-    setAppLogo(newLogo);
-    if (newLogo) {
-      localStorage.setItem('plastixide_app_logo', newLogo);
-    } else {
-      localStorage.removeItem('plastixide_app_logo');
+    try {
+      // If null passed (reset), revert to default
+      const logoToSet = newLogo || DEFAULT_LOGO_URL;
+      setAppLogo(logoToSet);
+      
+      if (newLogo) {
+        localStorage.setItem('plastixide_app_logo', newLogo);
+      } else {
+        // If resetting, clear storage so it falls back to default on reload
+        localStorage.removeItem('plastixide_app_logo');
+      }
+    } catch (error) {
+      console.error("Storage quota exceeded", error);
+      alert("Unable to save logo permanently: The image file is too large for browser storage.");
     }
   };
 
@@ -125,7 +145,11 @@ const App: React.FC = () => {
     // Citizen & Fisherman Views
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardCitizen user={currentUser} onNavigateToMap={() => setActiveTab('dashboard')} />; // Map is inside dashboard now
+        return <DashboardCitizen 
+          user={currentUser} 
+          onNavigateToMap={() => setActiveTab('dashboard')} 
+          onNewTransaction={handleCenterTransaction}
+        />; // Map is inside dashboard now
       case 'scan':
         return <SmartScanner onScanComplete={handleScanComplete} />;
       case 'marketplace':
@@ -165,12 +189,21 @@ const App: React.FC = () => {
           </div>
           
           <div className="ml-auto flex gap-2">
+             {/* Mobile Language Toggle */}
+             <button 
+               onClick={() => setLanguage(language === 'en' ? 'bn' : 'en')}
+               className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-brand-blue bg-blue-50 rounded-xl border border-blue-100 md:hidden"
+             >
+               <Languages size={14} />
+               {language === 'en' ? 'EN' : 'বাংলা'}
+             </button>
+
              <button 
                onClick={handleLogout}
                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-500 transition-colors"
              >
                <LogOut size={14} />
-               Logout
+               {language === 'bn' ? 'লগ আউট' : 'Logout'}
              </button>
           </div>
         </div>

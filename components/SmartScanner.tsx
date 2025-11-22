@@ -3,6 +3,7 @@ import { Camera, X, CheckCircle, RefreshCw, QrCode } from 'lucide-react';
 import { Button } from './ui/Button';
 import { analyzePlasticImage } from '../services/geminiService';
 import { ScanResult } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SmartScannerProps {
   onScanComplete: (points: number) => void;
@@ -11,6 +12,7 @@ interface SmartScannerProps {
 type ScanStep = 'QR' | 'PHOTO' | 'RESULT';
 
 export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) => {
+  const { t } = useLanguage();
   const [step, setStep] = useState<ScanStep>('QR');
   const [image, setImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -68,9 +70,9 @@ export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) =>
   return (
     <div className="flex flex-col h-full pb-20">
       <header className="mb-6">
-        <h2 className="text-2xl font-heading font-bold text-gray-800">Smart Exchange</h2>
+        <h2 className="text-2xl font-heading font-bold text-gray-800">{t('scan_title')}</h2>
         <p className="text-gray-500">
-          {step === 'QR' ? 'Scan machine QR code' : step === 'PHOTO' ? 'Deposit Plastic' : 'Processing...'}
+          {step === 'QR' ? t('scan_instruction') : step === 'PHOTO' ? t('scan_desc_photo') : t('scan_desc_process')}
         </p>
       </header>
 
@@ -83,9 +85,9 @@ export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) =>
                <div className="absolute inset-0 border-t-4 border-brand-green animate-scan"></div>
                <QrCode size={100} className="text-gray-300 opacity-50" />
              </div>
-             <p className="text-center text-gray-500 max-w-xs">Point your camera at the QR code displayed on the PlastiXide Vending Machine.</p>
+             <p className="text-center text-gray-500 max-w-xs">{t('scan_desc_qr')}</p>
              <Button onClick={handleQRScan} isLoading={isAnalyzing} className="w-full">
-               {isAnalyzing ? 'Connecting...' : 'Simulate QR Scan'}
+               {isAnalyzing ? 'Connecting...' : t('scan_btn_simulate')}
              </Button>
           </div>
         )}
@@ -96,7 +98,6 @@ export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) =>
             <input 
               type="file" 
               accept="image/*" 
-              capture="environment"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               onChange={handleFileChange}
               ref={fileInputRef}
@@ -104,7 +105,7 @@ export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) =>
             <div className="bg-white p-6 rounded-full shadow-lg mb-4 group-hover:scale-110 transition-transform">
               <Camera size={40} className="text-brand-green" />
             </div>
-            <p className="font-semibold text-gray-600">Tap to Scan Plastic</p>
+            <p className="font-semibold text-gray-600">{t('scan_tap')}</p>
             <p className="text-xs text-gray-400 mt-2">Ensure clear visibility</p>
           </div>
         )}
@@ -117,7 +118,7 @@ export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) =>
               {isAnalyzing && (
                 <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white backdrop-blur-sm">
                   <RefreshCw className="animate-spin mb-4" size={48} />
-                  <p className="font-heading font-semibold">AI Analyzing Material...</p>
+                  <p className="font-heading font-semibold">{t('scan_analyzing')}</p>
                   <p className="text-sm opacity-75">Estimating weight & type</p>
                 </div>
               )}
@@ -140,18 +141,18 @@ export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) =>
                     <X className="text-red-500" size={24} />
                   )}
                   <h3 className={`font-bold text-lg ${result.isPlastic ? 'text-green-800' : 'text-red-800'}`}>
-                    {result.isPlastic ? 'Accepted!' : 'Not Accepted'}
+                    {result.isPlastic ? t('scan_accepted') : t('scan_rejected')}
                   </h3>
                 </div>
                 <p className="text-gray-600 mb-2">{result.message}</p>
                 {result.isPlastic && (
                   <div className="flex justify-between items-center mt-4 pt-4 border-t border-green-200">
                     <div>
-                      <p className="text-xs text-green-600 uppercase font-bold">Type</p>
+                      <p className="text-xs text-green-600 uppercase font-bold">{t('scan_type')}</p>
                       <p className="font-medium">{result.plasticType || 'Unknown'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-green-600 uppercase font-bold">Est. Weight</p>
+                      <p className="text-xs text-green-600 uppercase font-bold">{t('scan_est_weight')}</p>
                       <p className="font-medium">{result.estimatedWeight}g</p>
                     </div>
                   </div>
@@ -161,12 +162,12 @@ export const SmartScanner: React.FC<SmartScannerProps> = ({ onScanComplete }) =>
 
             {!result && !isAnalyzing && (
               <Button onClick={handleAnalyze} className="w-full py-4 text-lg shadow-xl shadow-emerald-200">
-                Process Submission
+                {t('scan_btn_process')}
               </Button>
             )}
             
             {result && (
-              <Button onClick={reset} variant="outline" className="w-full">Scan Next Item</Button>
+              <Button onClick={reset} variant="outline" className="w-full">{t('scan_next')}</Button>
             )}
           </div>
         )}

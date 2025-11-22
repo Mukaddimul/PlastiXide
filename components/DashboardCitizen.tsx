@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Card } from './ui/Card';
-import { ArrowUpRight, Leaf, Coins, MapPin, RefreshCw, Bell, DollarSign, Calendar, Truck, Banknote, X, CalendarCheck } from 'lucide-react';
+import { ArrowUpRight, Leaf, Coins, MapPin, Bell, Calendar, Truck, Banknote, X, CalendarCheck, CheckCircle2, MessageSquare, Camera, History } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { MapView } from './Map';
 import { MOCK_NOTIFICATIONS, MOCK_FISHERMAN_TRANSACTIONS } from '../constants';
 import { Button } from './ui/Button';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface DashboardCitizenProps {
   user: User;
   onNavigateToMap: () => void;
+  onNewTransaction?: (data: any) => void;
 }
 
 const data = [
@@ -22,22 +24,49 @@ const data = [
   { name: 'Sun', kg: 2.4 },
 ];
 
-export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavigateToMap }) => {
+export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavigateToMap, onNewTransaction }) => {
+  const { t } = useLanguage();
   const [view, setView] = useState<'stats' | 'map'>('stats');
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [pickupLoading, setPickupLoading] = useState(false);
   const [pickupSuccess, setPickupSuccess] = useState(false);
   const [estWeight, setEstWeight] = useState('');
   
+  // New state for viewing complete history
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  
   const isFisherman = user.role === UserRole.FISHERMAN;
+
+  const calculateCash = () => {
+    const w = parseFloat(estWeight);
+    return isNaN(w) ? 0 : Math.floor(w * 25); // 25 BDT per kg for home pickup
+  };
 
   const handlePickupRequest = (e: React.FormEvent) => {
     e.preventDefault();
     setPickupLoading(true);
+
+    const cashAmount = calculateCash();
+    const pickupData = {
+      id: Date.now().toString(),
+      userId: user.id,
+      userName: user.name,
+      userPhone: user.phone,
+      weight: estWeight,
+      amount: cashAmount,
+      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      location: 'Home Pickup Request'
+    };
+
     // Simulate API call
     setTimeout(() => {
       setPickupLoading(false);
       setPickupSuccess(true);
+      
+      // Log to Admin Dashboard
+      if (onNewTransaction) {
+        onNewTransaction(pickupData);
+      }
     }, 2000);
   };
 
@@ -47,19 +76,14 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
     setEstWeight('');
   };
 
-  const calculateCash = () => {
-    const w = parseFloat(estWeight);
-    return isNaN(w) ? 0 : Math.floor(w * 25); // 25 BDT per kg for home pickup
-  };
-
   return (
     <div className="space-y-6 pb-20 animate-fade-in relative">
       {/* Header */}
       <header className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-heading font-bold text-gray-800">Hello, {user.name.split(' ')[0]}!</h2>
+          <h2 className="text-2xl font-heading font-bold text-gray-800">{t('welcome')}, {user.name.split(' ')[0]}!</h2>
           <p className="text-gray-500 text-sm">
-            {isFisherman ? 'Keep the rivers clean 🌊' : 'Ready to save the planet today? 🌱'}
+            {isFisherman ? t('hello_msg_fisherman') : t('hello_msg_citizen')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -70,7 +94,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
           <div className={`${isFisherman ? 'bg-brand-blue/10' : 'bg-brand-green/10'} px-4 py-2 rounded-full flex items-center gap-2`}>
             <Coins className={isFisherman ? 'text-brand-blue' : 'text-brand-green'} size={20} />
             <span className={`font-bold ${isFisherman ? 'text-brand-blue' : 'text-brand-green'}`}>
-              {user.points} pts
+              {user.points} {t('points')}
             </span>
           </div>
         </div>
@@ -90,7 +114,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
           onClick={() => setView('stats')}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${view === 'stats' ? 'bg-white shadow text-brand-dark' : 'text-gray-500'}`}
         >
-          Overview
+          {t('nav_dashboard')}
         </button>
         <button 
           onClick={() => setView('map')}
@@ -111,7 +135,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                   {isFisherman && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white">Today</span>}
                 </div>
                 <div>
-                  <p className="text-white/80 text-sm">{isFisherman ? 'Collected Today' : 'Total Recycled'}</p>
+                  <p className="text-white/80 text-sm">{isFisherman ? t('stat_collected_today') : t('stat_recycled')}</p>
                   <h3 className="text-2xl font-bold">{user.totalPlasticRecycled} kg</h3>
                 </div>
               </div>
@@ -120,7 +144,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
               <div className="flex flex-col h-full justify-between min-h-[100px]">
                 <ArrowUpRight className="text-gray-400" size={24} />
                 <div>
-                  <p className="text-gray-500 text-sm">Impact Score</p>
+                  <p className="text-gray-500 text-sm">{t('stat_impact')}</p>
                   <h3 className="text-2xl font-bold">{user.impactScore} <span className="text-xs font-normal text-green-500">+5%</span></h3>
                 </div>
               </div>
@@ -128,7 +152,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
           </div>
 
           {/* Activity Chart */}
-          <Card title="Weekly Contribution">
+          <Card title={t('chart_title')}>
             <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data}>
@@ -149,15 +173,21 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
             </div>
           </Card>
 
-          {/* Fisherman Payment History Section */}
+          {/* Fisherman Payment History Summary */}
           {isFisherman && (
             <div className="animate-fade-in">
                <div className="flex items-center justify-between mb-4">
-                 <h3 className="font-heading font-bold text-lg text-gray-800">Payment History</h3>
-                 <button className="text-sm text-brand-blue font-semibold hover:underline">View All</button>
+                 <h3 className="font-heading font-bold text-lg text-gray-800">{t('recent_payments')}</h3>
+                 <button 
+                    onClick={() => setShowHistoryModal(true)} 
+                    className="text-sm text-brand-blue font-semibold hover:underline"
+                  >
+                    {t('view_all')}
+                  </button>
                </div>
                <div className="space-y-3">
-                 {MOCK_FISHERMAN_TRANSACTIONS.map((tx) => (
+                 {/* Only show first 3 items in summary */}
+                 {MOCK_FISHERMAN_TRANSACTIONS.slice(0, 3).map((tx) => (
                    <div key={tx.id} className="bg-white p-4 rounded-xl border-l-4 border-l-brand-blue shadow-sm flex items-center justify-between">
                       <div>
                         <h4 className="font-bold text-brand-dark text-sm">{tx.location}</h4>
@@ -181,7 +211,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
             </div>
           )}
 
-          {/* Action Call: Find Nearest & Home Pickup */}
+          {/* Action Call: Find Nearest & Home Pickup (For Citizen Only) */}
           {!isFisherman && (
             <div className="grid grid-cols-1 gap-4">
               {/* Map Action */}
@@ -191,7 +221,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                     <MapPin size={24} />
                   </div>
                   <div>
-                    <h4 className="font-bold">Find Vending Machine</h4>
+                    <h4 className="font-bold">{t('btn_find_machine')}</h4>
                     <p className="text-xs text-gray-400">3 centers & 5 machines nearby</p>
                   </div>
                 </div>
@@ -207,8 +237,8 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                     <Truck size={24} />
                   </div>
                   <div>
-                    <h4 className="font-bold">Doorstep Cash Collection</h4>
-                    <p className="text-xs text-white/80">Weekly pickup • Get paid in Cash 💵</p>
+                    <h4 className="font-bold">{t('btn_home_pickup')}</h4>
+                    <p className="text-xs text-white/80">{t('desc_home_pickup')}</p>
                   </div>
                 </div>
                 <div className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center font-bold">
@@ -220,6 +250,69 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
         </>
       ) : (
         <MapView />
+      )}
+
+      {/* Complete Payment History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <Card className="w-full max-w-lg h-[80vh] flex flex-col relative overflow-hidden">
+            <button 
+              onClick={() => setShowHistoryModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 p-1 bg-white rounded-full"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="flex items-center gap-3 mb-6 p-1">
+              <div className="bg-brand-blue/10 p-3 rounded-full text-brand-blue">
+                <History size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">{t('history')}</h3>
+                <p className="text-sm text-gray-500">Complete record of your earnings</p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+              {MOCK_FISHERMAN_TRANSACTIONS.map((tx) => (
+                 <div key={tx.id} className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow flex items-center justify-between group">
+                    <div>
+                      <h4 className="font-bold text-brand-dark text-sm group-hover:text-brand-blue transition-colors">{tx.location}</h4>
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                        <Calendar size={12} />
+                        <span>{tx.date}</span>
+                      </div>
+                      <div className="mt-1">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          tx.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {tx.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center justify-end gap-1 text-brand-blue font-bold text-lg">
+                        <span className="text-sm">৳</span>
+                        {tx.cashEarned}
+                      </div>
+                      <span className="text-xs font-medium text-gray-500">
+                        {tx.amountKg} kg @ ৳{(tx.cashEarned! / tx.amountKg!).toFixed(0)}/kg
+                      </span>
+                    </div>
+                 </div>
+              ))}
+              <div className="text-center text-xs text-gray-400 py-4">
+                End of history records
+              </div>
+            </div>
+            
+            <div className="pt-4 mt-auto border-t border-gray-100">
+               <Button onClick={() => setShowHistoryModal(false)} className="w-full">
+                 Close
+               </Button>
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* Home Pickup Request Modal */}
@@ -240,7 +333,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                    <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-3">
                      <Truck size={32} />
                    </div>
-                   <h3 className="text-xl font-bold text-gray-800">Schedule Weekly Pickup</h3>
+                   <h3 className="text-xl font-bold text-gray-800">{t('btn_home_pickup')}</h3>
                    <p className="text-sm text-gray-500">We collect from your home every Friday.</p>
                 </div>
 
@@ -249,7 +342,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                   <input 
                     type="text" 
                     defaultValue="House 12, Road 5, Dhanmondi, Dhaka"
-                    className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium outline-none focus:border-orange-500"
+                    className="w-full p-3 bg-white rounded-xl border border-gray-200 text-sm text-gray-700 font-medium outline-none focus:border-orange-500"
                   />
                 </div>
 
@@ -262,7 +355,7 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                       onChange={(e) => setEstWeight(e.target.value)}
                       placeholder="e.g. 5.0"
                       required
-                      className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 text-lg font-bold outline-none focus:border-orange-500"
+                      className="w-full p-3 bg-white rounded-xl border border-gray-200 text-lg font-bold outline-none focus:border-orange-500"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">kg</span>
                   </div>
@@ -291,5 +384,50 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
                 </Button>
               </form>
             ) : (
-              <div className="text-center py-6 animate-fade-in">
-                 <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-
+              <div className="text-center py-6 animate-fade-in flex flex-col items-center">
+                 <div className="flex items-center gap-2 text-green-600 mb-6">
+                    <CheckCircle2 size={32} />
+                    <h3 className="text-2xl font-bold font-heading">Request Confirmed!</h3>
+                 </div>
+
+                 {/* Realistic Mobile SMS Simulation */}
+                 <div className="bg-gray-900 p-4 rounded-[2rem] w-64 shadow-2xl border-[4px] border-gray-800 relative transform transition-all hover:scale-105 mb-6">
+                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-4 bg-black rounded-b-xl z-10"></div>
+                     <div className="h-64 flex flex-col pt-8 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800 z-0"></div>
+                        <div className="text-center text-gray-200 font-thin text-4xl mb-6 z-10">
+                          {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </div>
+                        <div className="mx-2 bg-white/90 backdrop-blur-md text-brand-dark p-3 rounded-2xl text-left shadow-lg animate-slide-up z-10">
+                           <div className="flex justify-between items-center mb-1 border-b border-gray-200 pb-1">
+                              <div className="flex items-center gap-1">
+                                <div className="bg-green-500 p-0.5 rounded text-white"><MessageSquare size={8} /></div>
+                                <span className="text-[8px] font-bold uppercase text-gray-600">PlastiXide • Now</span>
+                              </div>
+                           </div>
+                           <p className="text-[10px] font-bold mb-0.5">Pickup Scheduled</p>
+                           <p className="text-[10px] text-gray-700 leading-tight">
+                             Hi {user.name.split(' ')[0]}, pickup confirmed for Friday. Est. Cash: <span className="font-bold">৳{calculateCash()}</span> for {estWeight}kg.
+                           </p>
+                        </div>
+                        <div className="mt-auto mb-2 flex justify-center gap-3 z-10">
+                          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"><Camera size={12} className="text-white" /></div>
+                        </div>
+                     </div>
+                 </div>
+
+                 <p className="text-gray-500 text-sm mb-6">
+                   Our collection vehicle will arrive at your doorstep this <span className="font-bold text-brand-dark">Friday between 10 AM - 12 PM</span>.
+                 </p>
+
+                 <Button onClick={closePickupModal} variant="outline" className="w-full">
+                   Done
+                 </Button>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};

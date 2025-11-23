@@ -114,6 +114,9 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
 
     // Simulate network delay and SMS sending time
     setTimeout(() => {
+      // Log for demo purposes
+      console.log(`SMS Gateway Triggered: Sending to ${txData.userPhone}`);
+      
       setLoading(false);
       setShowSuccess(true);
       setLastTx(txData);
@@ -244,10 +247,14 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
                        <div>
                          <p className="text-xs font-bold mb-1">{t('pay_received')}</p>
                          <p className="text-xs text-gray-700 leading-relaxed">
-                           Dear {lastTx.userName}, you received <span className="font-bold">৳{lastTx.amount}</span> for <span className="font-bold">{lastTx.weight}kg</span> plastic at {lastTx.location}.
-                           <br/><br/>
-                           <span className="text-[10px] text-gray-500 italic">Sent to {lastTx.userPhone}</span>
+                           PlastiXide Payment Confirmed: <br/>
+                           <span className="font-bold">৳{lastTx.amount}</span> sent to your account.<br/>
+                           Weight: <span className="font-bold">{lastTx.weight}kg</span><br/>
+                           Location: {lastTx.location}.
                          </p>
+                         <div className="mt-2 pt-1 border-t border-gray-200/50">
+                             <span className="text-[9px] text-gray-500 font-mono">To: {lastTx.userPhone}</span>
+                         </div>
                        </div>
                     </div>
 
@@ -263,7 +270,9 @@ export const CollectionCenterPortal: React.FC<CollectionCenterPortalProps> = ({ 
               </div>
 
               <div className="mt-8 flex flex-col items-center gap-2">
-                <p className="text-sm text-gray-500">{t('sms_sent_auto')}</p>
+                <p className="text-sm text-gray-500 font-medium">
+                   Automated SMS Triggered to <span className="text-brand-dark font-bold">{lastTx.userPhone}</span>
+                </p>
                 <Button onClick={() => setShowSuccess(false)} size="sm" variant="outline">
                    {t('start_new')}
                 </Button>

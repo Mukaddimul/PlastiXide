@@ -63,12 +63,14 @@ export const DashboardCitizen: React.FC<DashboardCitizenProps> = ({ user, onNavi
     setPickupLoading(true);
 
     const cashAmount = calculateCash();
+    const weightNum = parseFloat(estWeight);
+    
     const pickupData = {
       id: Date.now().toString(),
       userId: user.id,
       userName: user.name,
       userPhone: user.phone,
-      weight: estWeight,
+      weight: isNaN(weightNum) ? 0 : weightNum,
       amount: cashAmount,
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
       location: 'Home Pickup Request',

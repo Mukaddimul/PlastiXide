@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation2, AlertTriangle, CheckCircle2, XCircle, BatteryFull, Wrench } from 'lucide-react';
+import { MapPin, Navigation2, AlertTriangle, CheckCircle2, XCircle, BatteryFull, Wrench, Layers, Globe } from 'lucide-react';
 import { MOCK_MAP_POINTS } from '../constants';
 import { MapPoint } from '../types';
 import { Card } from './ui/Card';
@@ -9,6 +10,7 @@ export const MapView: React.FC = () => {
   const { t } = useLanguage();
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [points, setPoints] = useState<MapPoint[]>(MOCK_MAP_POINTS);
+  const [mapStyle, setMapStyle] = useState<'road' | 'satellite'>('satellite');
 
   // Simulation for Real-Time Status Updates
   useEffect(() => {
@@ -50,12 +52,12 @@ export const MapView: React.FC = () => {
   }, []);
 
   const getStatusConfig = (status: string, type: string) => {
-    if (type === 'CENTER') return { color: 'text-brand-blue', bg: 'bg-blue-500', ring: 'ring-blue-300' };
+    if (type === 'CENTER') return { color: 'text-brand-blue', bg: 'bg-blue-500', ring: 'ring-blue-300', glow: 'shadow-[0_0_15px_rgba(59,130,246,0.6)]' };
     switch (status) {
-      case 'ONLINE': return { color: 'text-green-500', bg: 'bg-green-500', ring: 'ring-green-300' };
-      case 'FULL': return { color: 'text-red-500', bg: 'bg-red-500', ring: 'ring-red-300' };
-      case 'MAINTENANCE': return { color: 'text-orange-500', bg: 'bg-orange-500', ring: 'ring-orange-300' };
-      default: return { color: 'text-gray-400', bg: 'bg-gray-400', ring: 'ring-gray-200' };
+      case 'ONLINE': return { color: 'text-green-400', bg: 'bg-green-500', ring: 'ring-green-300', glow: 'shadow-[0_0_15px_rgba(74,222,128,0.6)]' };
+      case 'FULL': return { color: 'text-red-500', bg: 'bg-red-500', ring: 'ring-red-300', glow: 'shadow-[0_0_15px_rgba(239,68,68,0.6)]' };
+      case 'MAINTENANCE': return { color: 'text-orange-400', bg: 'bg-orange-500', ring: 'ring-orange-300', glow: 'shadow-[0_0_15px_rgba(251,146,60,0.6)]' };
+      default: return { color: 'text-gray-400', bg: 'bg-gray-400', ring: 'ring-gray-200', glow: '' };
     }
   };
 
@@ -69,9 +71,29 @@ export const MapView: React.FC = () => {
   };
 
   return (
-    <div className="relative h-[calc(100vh-180px)] w-full rounded-3xl overflow-hidden bg-gray-100 border border-gray-200 shadow-inner">
-      {/* Fake Map Background */}
-      <div className="absolute inset-0 opacity-30 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Google_Maps_Logo_2020.svg/2275px-Google_Maps_Logo_2020.svg.png')] bg-cover bg-center grayscale" />
+    <div className="relative h-[calc(100vh-180px)] w-full rounded-3xl overflow-hidden bg-gray-900 border border-gray-700 shadow-2xl group">
+      
+      {/* Dynamic Map Background */}
+      {mapStyle === 'road' ? (
+        <div className="absolute inset-0 bg-[#e5e7eb] opacity-100 transition-all duration-700">
+           {/* Abstract Road Pattern */}
+           <div className="absolute inset-0" style={{
+             backgroundImage: 'linear-gradient(#d1d5db 2px, transparent 2px), linear-gradient(90deg, #d1d5db 2px, transparent 2px)',
+             backgroundSize: '100px 100px',
+             opacity: 0.3
+           }}></div>
+           {/* City Image for texture */}
+           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center opacity-10 grayscale mix-blend-multiply"></div>
+        </div>
+      ) : (
+        <div className="absolute inset-0 bg-black transition-all duration-700">
+           {/* Satellite Imagery */}
+           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center opacity-80 scale-110"></div>
+           {/* Dark Overlay for UI Contrast */}
+           <div className="absolute inset-0 bg-blue-900/20 mix-blend-overlay"></div>
+           <div className="absolute inset-0 bg-black/30"></div>
+        </div>
+      )}
       
       <div className="absolute inset-0 p-4">
         {/* Points */}
@@ -83,16 +105,21 @@ export const MapView: React.FC = () => {
             <button
               key={point.id}
               onClick={() => setSelectedPoint(point)}
-              className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 hover:scale-110 ${isSelected ? 'scale-125 z-20' : 'z-10'}`}
+              className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 hover:scale-110 hover:z-30 ${isSelected ? 'scale-125 z-20' : 'z-10'}`}
               style={{ 
                 top: `${(point.lat - 23.7) * 1000}%`, 
                 left: `${(point.lng - 90.3) * 1000}%` 
               }}
             >
-              <div className={`relative flex flex-col items-center ${config.color}`}>
+              <div className={`relative flex flex-col items-center group/pin`}>
                 <div className="relative">
+                  {/* Glow Effect for Satellite Mode */}
+                  {mapStyle === 'satellite' && (
+                    <div className={`absolute inset-0 rounded-full opacity-50 blur-md ${config.glow}`}></div>
+                  )}
+                  
                   {/* Main Pin Icon */}
-                  <MapPin size={48} fill="currentColor" className="drop-shadow-lg" />
+                  <MapPin size={48} fill="currentColor" className={`drop-shadow-2xl ${config.color} transition-colors duration-300`} />
                   
                   {/* Status Indicator Overlay */}
                   <div className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4">
@@ -112,8 +139,14 @@ export const MapView: React.FC = () => {
                 </div>
                 
                 {/* Label */}
-                <div className={`bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-md whitespace-nowrap mt-1 border flex items-center gap-1 transition-all ${isSelected ? 'border-brand-blue text-brand-blue scale-105' : 'border-gray-100 text-gray-600'}`}>
-                   {point.type === 'CENTER' && <Navigation2 size={10} className="text-brand-blue" />}
+                <div className={`
+                  backdrop-blur-md px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-xl whitespace-nowrap mt-1 border flex items-center gap-1 transition-all duration-300
+                  ${isSelected ? 'border-brand-blue text-brand-blue scale-105 bg-white/95' : 
+                    mapStyle === 'satellite' 
+                      ? 'bg-black/60 border-white/10 text-white' 
+                      : 'bg-white/90 border-gray-100 text-gray-600'}
+                `}>
+                   {point.type === 'CENTER' && <Navigation2 size={10} className={mapStyle === 'satellite' ? "text-blue-400" : "text-brand-blue"} />}
                    {point.name}
                 </div>
               </div>
@@ -125,7 +158,9 @@ export const MapView: React.FC = () => {
       {/* Point Detail Overlay */}
       {selectedPoint && (
         <div className="absolute bottom-4 left-4 right-4 z-30 animate-fade-in">
-          <Card className={`p-4 shadow-2xl border-t-4 ${
+          <Card className={`p-4 shadow-2xl border-t-4 backdrop-blur-md ${
+             mapStyle === 'satellite' ? 'bg-white/95' : 'bg-white'
+          } ${
              selectedPoint.status === 'FULL' ? 'border-t-red-500' : 
              selectedPoint.status === 'MAINTENANCE' ? 'border-t-orange-500' : 
              selectedPoint.type === 'CENTER' ? 'border-t-brand-blue' : 'border-t-brand-green'
@@ -190,21 +225,43 @@ export const MapView: React.FC = () => {
         </div>
       )}
 
-      {/* Map Controls / Legend */}
+      {/* Map Style Toggle */}
+      <div className="absolute top-4 left-4 z-20">
+        <div className="bg-white/90 backdrop-blur-md p-1 rounded-lg border border-gray-200 shadow-lg flex">
+           <button 
+             onClick={() => setMapStyle('road')}
+             className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold ${mapStyle === 'road' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+           >
+             <div className="w-4 h-4 border border-gray-400 bg-gray-50 rounded-sm"></div>
+             Road
+           </button>
+           <button 
+             onClick={() => setMapStyle('satellite')}
+             className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold ${mapStyle === 'satellite' ? 'bg-brand-blue text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}
+           >
+             <Globe size={14} />
+             Satellite
+           </button>
+        </div>
+      </div>
+
+      {/* Map Legend */}
       <div className="absolute top-4 right-4 flex flex-col gap-2">
-        <div className="bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-md flex flex-col gap-2 text-xs border border-gray-200">
-           <div className="font-bold text-gray-400 text-[10px] uppercase mb-1">{t('map_legend')}</div>
+        <div className={`backdrop-blur-md p-3 rounded-xl shadow-md flex flex-col gap-2 text-xs border transition-colors duration-500 ${
+          mapStyle === 'satellite' ? 'bg-black/60 border-white/10 text-white' : 'bg-white/95 border-gray-200 text-gray-800'
+        }`}>
+           <div className={`font-bold text-[10px] uppercase mb-1 ${mapStyle === 'satellite' ? 'text-gray-400' : 'text-gray-400'}`}>{t('map_legend')}</div>
            <div className="flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-green-500"></span> {t('status_online')}
+             <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span> {t('status_online')}
            </div>
            <div className="flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-red-500"></span> {t('status_full')}
+             <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span> {t('status_full')}
            </div>
            <div className="flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-orange-500"></span> {t('status_maintenance')}
+             <span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"></span> {t('status_maintenance')}
            </div>
            <div className="flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-brand-blue"></span> {t('map_center')}
+             <span className="w-2 h-2 rounded-full bg-brand-blue shadow-[0_0_8px_rgba(59,130,246,0.6)]"></span> {t('map_center')}
            </div>
         </div>
       </div>

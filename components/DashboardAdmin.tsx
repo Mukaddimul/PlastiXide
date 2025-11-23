@@ -126,10 +126,16 @@ export const DashboardAdmin: React.FC<DashboardAdminProps> = ({ currentLogo, onU
              ) : (
                liveTransactions.map((tx, idx) => (
                  <div key={idx} className="bg-gray-50 p-3 rounded-xl border border-gray-100 animate-fade-in relative overflow-hidden">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-blue"></div>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${tx.location === 'Home Pickup Request' ? 'bg-orange-500' : 'bg-brand-blue'}`}></div>
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-bold text-xs text-gray-800">{tx.userName}</span>
-                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 rounded font-bold">PAID</span>
+                      <span className={`text-[10px] px-1.5 rounded font-bold ${
+                        tx.location === 'Home Pickup Request' 
+                          ? 'bg-orange-100 text-orange-700' 
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {tx.location === 'Home Pickup Request' ? 'REQUEST' : 'PAID'}
+                      </span>
                     </div>
                     <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
                        <span className="font-mono">{tx.userId}</span>

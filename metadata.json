@@ -1,0 +1,8 @@
+{
+  "name": "PlastiXide",
+  "description": "A reward-based plastic recycling ecosystem connecting citizens, fishermen, and recycling centers.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

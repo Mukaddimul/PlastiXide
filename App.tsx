@@ -8,73 +8,86 @@ import { CollectionCenterPortal } from './components/CollectionCenterPortal.tsx'
 import { CorporatePortal } from './components/CorporatePortal.tsx';
 import { Wallet } from './components/Wallet.tsx';
 import { Auth } from './components/Auth.tsx';
-import { UserRole, User, Transaction } from './types.ts';
-import { LogOut, Languages } from 'lucide-react';
+import { UserRole, User } from './types.ts';
+import { LogOut, Languages, Loader2 } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext.tsx';
 import { DEFAULT_LOGO_URL } from './constants.ts';
+import { supabase } from './services/supabase.ts';
 
 const App: React.FC = () => {
-  // State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  
-  // Language Hook
   const { language, setLanguage } = useLanguage();
-
-  // Shared State for Admin Monitoring
   const [liveTransactions, setLiveTransactions] = useState<any[]>([]);
 
-  // Global App Settings State with Persistence
   const [appLogo, setAppLogo] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('plastixide_app_logo');
         return saved || DEFAULT_LOGO_URL;
       } catch (e) {
-        console.error("Failed to access local storage", e);
         return DEFAULT_LOGO_URL;
       }
     }
     return DEFAULT_LOGO_URL;
   });
 
-  // Update Logo Handler with Persistence
+  useEffect(() => {
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        await fetchUserProfile(session.user.id, session.user.user_metadata);
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      }
+      setIsInitializing(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string, metadata: any) => {
+    // Attempt to fetch from profiles table
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (data) {
+      setCurrentUser(data as User);
+    } else {
+      // Fallback to metadata if table doesn't exist or is empty
+      setCurrentUser({
+        id: userId,
+        name: metadata.full_name || 'User',
+        role: metadata.role || UserRole.CITIZEN,
+        points: metadata.points || 0,
+        walletBalance: 0,
+        totalPlasticRecycled: 0,
+        impactScore: 0,
+        phone: metadata.phone || '',
+      });
+    }
+  };
+
   const handleUpdateLogo = (newLogo: string | null) => {
     try {
       const logoToSet = newLogo || DEFAULT_LOGO_URL;
       setAppLogo(logoToSet);
-      
-      if (newLogo) {
-        localStorage.setItem('plastixide_app_logo', newLogo);
-      } else {
-        localStorage.removeItem('plastixide_app_logo');
-      }
+      if (newLogo) localStorage.setItem('plastixide_app_logo', newLogo);
+      else localStorage.removeItem('plastixide_app_logo');
     } catch (error) {
-      console.error("Storage quota exceeded", error);
-      alert("Unable to save logo permanently: The image file is too large for browser storage.");
+      alert("Unable to save logo permanently: Image file is too large.");
     }
   };
 
-  // Handlers
-  const handleLogin = (role: UserRole, name: string) => {
-    setCurrentUser({
-      id: 'u1',
-      name: name,
-      role: role,
-      points: 1250,
-      walletBalance: 50000,
-      totalPlasticRecycled: 24.5,
-      impactScore: 85,
-      phone: '01700000000'
-    });
-    setIsAuthenticated(true);
-    setActiveTab(role === UserRole.ADMIN ? 'analytics' : 'dashboard');
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   const handleScanComplete = (pointsEarned: number) => {
@@ -102,27 +115,19 @@ const App: React.FC = () => {
     setLiveTransactions(prev => [data, ...prev]);
   };
 
-  // View Router
   const renderView = () => {
     if (!currentUser) return null;
 
     if (currentUser.role === UserRole.ADMIN) {
         if (activeTab === 'wallet') return <Wallet user={currentUser} />;
-        return <DashboardAdmin 
-          currentLogo={appLogo} 
-          onUpdateLogo={handleUpdateLogo} 
-          liveTransactions={liveTransactions}
-        />;
+        return <DashboardAdmin currentLogo={appLogo} onUpdateLogo={handleUpdateLogo} liveTransactions={liveTransactions} />;
     }
 
     if (currentUser.role === UserRole.COLLECTION_CENTER) {
         switch(activeTab) {
-            case 'dashboard': 
-              return <CollectionCenterPortal onNewTransaction={handleCenterTransaction} />;
-            case 'analytics': 
-              return <DashboardAdmin liveTransactions={liveTransactions} readOnly={true} />; 
-            default: 
-              return <CollectionCenterPortal onNewTransaction={handleCenterTransaction} />;
+            case 'dashboard': return <CollectionCenterPortal onNewTransaction={handleCenterTransaction} />;
+            case 'analytics': return <DashboardAdmin liveTransactions={liveTransactions} readOnly={true} />; 
+            default: return <CollectionCenterPortal onNewTransaction={handleCenterTransaction} />;
         }
     }
 
@@ -137,11 +142,7 @@ const App: React.FC = () => {
 
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardCitizen 
-          user={currentUser} 
-          onNavigateToMap={() => setActiveTab('dashboard')} 
-          onNewTransaction={handleCenterTransaction}
-        />;
+        return <DashboardCitizen user={currentUser} onNavigateToMap={() => setActiveTab('dashboard')} onNewTransaction={handleCenterTransaction} />;
       case 'scan':
         return <SmartScanner onScanComplete={handleScanComplete} />;
       case 'marketplace':
@@ -153,58 +154,35 @@ const App: React.FC = () => {
     }
   };
 
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-brand-light">
+        <Loader2 className="w-12 h-12 text-brand-green animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
-    return <Auth onLogin={handleLogin} logoUrl={appLogo} />;
+    return <Auth onLogin={() => {}} logoUrl={appLogo} />;
   }
 
   return (
     <div className="min-h-screen bg-brand-light flex font-sans">
-      <DesktopSidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        userRole={currentUser!.role}
-        logoUrl={appLogo}
-      />
-
+      <DesktopSidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser!.role} logoUrl={appLogo} />
       <main className="flex-1 md:ml-64 p-4 md:p-8 max-w-5xl mx-auto w-full">
         <div className="flex justify-between items-center mb-6">
           <div className="md:hidden flex items-center gap-3">
-             {appLogo ? (
-               <img src={appLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white border border-gray-100" />
-             ) : (
-               <div className="w-8 h-8 bg-brand-green rounded-lg flex items-center justify-center text-white font-bold shadow-sm">P</div>
-             )}
+             {appLogo ? <img src={appLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white border border-gray-100" /> : <div className="w-8 h-8 bg-brand-green rounded-lg flex items-center justify-center text-white font-bold shadow-sm">P</div>}
              <span className="font-heading font-bold text-brand-dark text-lg">PlastiXide</span>
           </div>
-          
           <div className="ml-auto flex gap-2">
-             <button 
-               onClick={() => setLanguage(language === 'en' ? 'bn' : 'en')}
-               className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-brand-blue bg-blue-50 rounded-xl border border-blue-100 md:hidden"
-             >
-               <Languages size={14} />
-               {language === 'en' ? 'EN' : 'বাংলা'}
-             </button>
-
-             <button 
-               onClick={handleLogout}
-               className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-500 transition-colors"
-             >
-               <LogOut size={14} />
-               {language === 'bn' ? 'লগ আউট' : 'Logout'}
-             </button>
+             <button onClick={() => setLanguage(language === 'en' ? 'bn' : 'en')} className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-brand-blue bg-blue-50 rounded-xl border border-blue-100 md:hidden"><Languages size={14} />{language === 'en' ? 'EN' : 'বাংলা'}</button>
+             <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-500 transition-colors"><LogOut size={14} />{language === 'bn' ? 'লগ আউট' : 'Logout'}</button>
           </div>
         </div>
-
         {renderView()}
       </main>
-
-      <Navigation 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        userRole={currentUser!.role}
-        onMenuToggle={() => setActiveTab('wallet')}
-      />
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser!.role} onMenuToggle={() => setActiveTab('wallet')} />
     </div>
   );
 };
